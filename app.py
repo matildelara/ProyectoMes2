@@ -4,20 +4,27 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 import logging
+import os
 
 app = Flask(__name__)
 
 # Configurar el registro
 logging.basicConfig(level=logging.DEBUG)
 
-# Cargar el modelo y el scaler entrenados
+# Cargar el modelo y el scaler entrenados desde el directorio actual
 try:
-    model = joblib.load("C:/Users/Laraa/Pacial2_Proyecto9/random_forest_model.pkl")
-    scaler = joblib.load("C:/Users/Laraa/Pacial2_Proyecto9/scaler_internet.pkl")
-    app.logger.debug("Modelo y scaler cargados correctamente.")
-except FileNotFoundError:
-    app.logger.error("Error: No se encontró 'random_forest_model.pkl' o 'scaler_internet.pkl'. Asegúrate de guardarlos primero en C:/Users/Laraa/Pacial2_Proyecto9.")
-    exit()
+    model_path = os.path.join(os.path.dirname(__file__), 'random_forest_model.pkl')
+    scaler_path = os.path.join(os.path.dirname(__file__), 'scaler_internet.pkl')
+    model = joblib.load(model_path)
+    scaler = joblib.load(scaler_path)
+    app.logger.debug(f"Modelo cargado desde: {model_path}")
+    app.logger.debug(f"Scaler cargado desde: {scaler_path}")
+except FileNotFoundError as e:
+    app.logger.error(f"Error: No se encontró 'random_forest_model.pkl' o 'scaler_internet.pkl' en {os.path.dirname(__file__)}. Asegúrate de que estén en el directorio del proyecto.")
+    raise
+except Exception as e:
+    app.logger.error(f"Error al cargar los archivos: {str(e)}")
+    raise
 
 # Ruta para servir el formulario HTML
 @app.route('/')
@@ -39,7 +46,7 @@ def predict():
         # Validar y ajustar signal_strength si es necesario
         if signal_strength > 0:
             app.logger.warning("Signal_strength positivo detectado. Convertido a negativo.")
-            signal_strength = -abs(signal_strength)  # Ajuste temporal
+            signal_strength = -abs(signal_strength)
 
         # Crear un DataFrame con los nombres de columnas que coincidan con el entrenamiento
         data_df = pd.DataFrame([[download_speed, router_distance, packet_loss_rate, upload_speed, weather_conditions, signal_strength]],
@@ -60,4 +67,4 @@ def predict():
         return jsonify({'error': str(e)}), 400
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))  # Escucha en el puerto especificado por Render o 5000 por defecto
