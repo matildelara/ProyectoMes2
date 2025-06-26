@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Predictor de Internet Speed</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 400px;
+        }
+        label {
+            display: block;
+            font-size: 16px;
+            color: #555;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        input[type="submit"] {
+            width: 100%;
+            padding: 12px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+        #resultado {
+            margin-top: 20px;
+            font-size: 18px;
+            text-align: center;
+            color: #333;
+            font-weight: bold;
+        }
+    </style>
+    <script>
+        function predecirInternetSpeed(event) {
+            event.preventDefault();
+
+            // Obtener y validar los valores
+            const download_speed = document.getElementById("download_speed").value;
+            const router_distance = document.getElementById("router_distance").value;
+            const packet_loss_rate = document.getElementById("packet_loss_rate").value;
+            const upload_speed = document.getElementById("upload_speed").value;
+            const weather_conditions = document.getElementById("weather_conditions").value;
+            const signal_strength = document.getElementById("signal_strength").value;
+
+            console.log("Valores enviados:", { 
+                download_speed, router_distance, packet_loss_rate, 
+                upload_speed, weather_conditions, signal_strength 
+            });
+
+            // Validar que sean números (incluyendo decimales largos)
+            if (!isValidNumber(download_speed) || !isValidNumber(router_distance) || 
+                !isValidNumber(packet_loss_rate) || !isValidNumber(upload_speed) || 
+                !isValidNumber(weather_conditions) || !isValidNumber(signal_strength)) {
+                document.getElementById("resultado").innerText = 'Error: Ingresa solo números válidos.';
+                document.getElementById("resultado").style.color = '#ff0000';
+                return;
+            }
+
+            // Agregar timestamp para evitar caché
+            const timestamp = new Date().getTime();
+            fetch(`/predict?t=${timestamp}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+                body: `download_speed=${encodeURIComponent(download_speed)}&router_distance=${encodeURIComponent(router_distance)}&packet_loss_rate=${encodeURIComponent(packet_loss_rate)}&upload_speed=${encodeURIComponent(upload_speed)}&weather_conditions=${encodeURIComponent(weather_conditions)}&signal_strength=${encodeURIComponent(signal_strength)}`,
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log("Respuesta del servidor:", data);
+                if (data.error) {
+                    document.getElementById("resultado").innerText = 'Error: ' + data.error;
+                    document.getElementById("resultado").style.color = '#ff0000';
+                } else {
+                    document.getElementById("resultado").innerText = 'Internet Speed predicho: ' + data.internet_speed + ' Mbps';
+                    document.getElementById("resultado").style.color = '#4CAF50';
+                }
+            })
+            .catch(error => {
+                document.getElementById("resultado").innerText = 'Error en la solicitud: ' + error.message;
+                document.getElementById("resultado").style.color = '#ff0000';
+                console.error("Error:", error);
+            });
+
+            // Resetear el formulario después de enviar
+            // document.getElementById("formulario").reset(); // Descomenta si quieres borrar los campos
+        }
+
+        // Función para validar que sea un número (incluye decimales largos)
+        function isValidNumber(value) {
+            if (value === '') return false;
+            return !isNaN(parseFloat(value)) && isFinite(value);
+        }
+    </script>
+</head>
+<body>
+    <div class="form-container">
+        <h1>Predictor de Internet Speed</h1>
+        <form id="formulario" onsubmit="predecirInternetSpeed(event)">
+            <label for="download_speed">Download Speed (Mbps):</label>
+            <input type="text" id="download_speed" name="download_speed" required><br>
+            <label for="router_distance">Router Distance (m):</label>
+            <input type="text" id="router_distance" name="router_distance" required><br>
+            <label for="packet_loss_rate">Packet Loss Rate (%):</label>
+            <input type="text" id="packet_loss_rate" name="packet_loss_rate" required><br>
+            <label for="upload_speed">Upload Speed (Mbps):</label>
+            <input type="text" id="upload_speed" name="upload_speed" required><br>
+            <label for="weather_conditions">Weather Conditions (index):</label>
+            <input type="text" id="weather_conditions" name="weather_conditions" required><br>
+            <label for="signal_strength">Signal Strength (dBm):</label>
+            <input type="text" id="signal_strength" name="signal_strength" required><br><br>
+            <input type="submit" value="Predecir">
+        </form>
+        <p id="resultado"></p>
+    </div>
+</body>
+</html>
